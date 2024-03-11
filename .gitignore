@@ -1,0 +1,19 @@
+#   Media
+*.png
+*.jpg
+db_dataset/
+outputs/
+advnoise_dataset/
+assets/
+
+#   Checkpoints
+*.pth
+stable-diffusion-2-1-base
+checkpoints/
+
+#   Logs
+logs/
+
+#   Notebooks
+notebooks/
+
