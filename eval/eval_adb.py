@@ -18,9 +18,6 @@ experiment_path = '../nam-dev/insights/outputs/NEW_ATTACK/'
 ids = list(os.listdir(experiment_path))
 
 prompts = ['a_photo_of_sks_person', 'a_dslr_portrait_of_sks_person']
-epss = ['2e-2', '3.5e-2', '5e-2']
-
-prompt_eps = list(product(prompts, epss))
 
 accumulators = [Accumulator(), Accumulator(), Accumulator(), Accumulator(), Accumulator(), Accumulator()]
 # fdfr_accumulator = Accumulator()
@@ -28,47 +25,50 @@ accumulators = [Accumulator(), Accumulator(), Accumulator(), Accumulator(), Accu
 # psnr_accumulator = Accumulator()
 # lpips_accumulator = Accumulator()
 
-for prompt, eps in prompt_eps:
+for prompt in prompts:
     for accumulator in accumulators:
         accumulator.reset()
 
     for id in ids:
-        generated_target_folder = f'../nam-dev/insights/outputs/NEW_ATTACK/{id}/eps={eps}/self_latent+gaussian-std=3_targeted/dreambooth/checkpoint-1000/images/{prompt}'
-        generated_reference_folder = f'../nam-dev/insights/db_dataset/{id}/set_A'
+        generated_target_folder = f'../adb/outputs/ASPL_PNG_THESIS/{id}/dreambooth/checkpoint-1000/images/{prompt}'
+        generated_reference_folder = f'../adb/db_dataset/{id}/set_A'
 
-        protected_target_folder = f'../nam-dev/insights/outputs/NEW_ATTACK/{id}/eps={eps}/self_latent+gaussian-std=3_targeted/attacked_images'
-        protected_reference_folder = f'../nam-dev/insights/outputs/NEW_ATTACK/{id}/eps={eps}/self_latent+gaussian-std=3_targeted/clean_images'
+        protected_target_folder = f'../adb/outputs/ASPL_PNG_THESIS/{id}/adversarial/noise-ckpt/50'
+        protected_reference_folder = f'../adb/outputs/ASPL_PNG_THESIS/{id}/adversarial/image_before_adding_noise'
 
-        fdfr_score = FDFR.eval(
-            generated_target_folder,
-            log_info = True
-        )
+        try:
+            fdfr_score = FDFR.eval(
+                generated_target_folder,
+                log_info = True
+            )
 
-        ism_score = ISM.eval(
-            generated_target_folder,
-            generated_reference_folder,
-            log_info = True
-        )
+            ism_score = ISM.eval(
+                generated_target_folder,
+                generated_reference_folder,
+                log_info = True
+            )
 
-        brisque_score = BRISQUE.eval(
-            generated_target_folder
-        )
+            brisque_score = BRISQUE.eval(
+                generated_target_folder
+            )
 
-        psnr_score = PSNR.eval(
-            protected_target_folder,
-            protected_reference_folder
-        )
+            psnr_score = PSNR.eval(
+                protected_target_folder,
+                protected_reference_folder
+            )
 
-        lpips_score = LPIPS.eval(
-            protected_target_folder,
-            protected_reference_folder
-        )
+            lpips_score = LPIPS.eval(
+                protected_target_folder,
+                protected_reference_folder
+            )
 
-        ssim_score = SSIM.eval(
-            protected_target_folder,
-            protected_reference_folder
-        )
-
+            ssim_score = SSIM.eval(
+                protected_target_folder,
+                protected_reference_folder
+            )
+        except:
+            continue
+            
         print(f"FDFR: {fdfr_score}")
         print(f"ISM: {ism_score}")
         print(f"BRISQUE: {brisque_score}")
@@ -79,7 +79,6 @@ for prompt, eps in prompt_eps:
         result = {
             'id': id,
             'prompt': prompt,
-            'eps': eps,
             'fdfr': fdfr_score,
             'ism': ism_score,
             'brisque': brisque_score,
@@ -92,8 +91,8 @@ for prompt, eps in prompt_eps:
         for i in range(len(scores)):
             accumulators[i].accumulate(scores[i])
 
-    with open('./log.txt', 'a') as log:
-        log.write(f'eps = {eps}, prompt = \'{prompt}\'\n')
+    with open('./log_adb.txt', 'a') as log:
+        log.write(f'prompt = \'{prompt}\'\n')
         for accumulator in accumulators:
             log.write(f'{accumulator.average()}\n')
 

@@ -14,7 +14,7 @@ def read_image(src, pixel_range = (0, 1), add_batch_dimension = True):
     
     pipe = transforms.Compose(modules)
     
-    torch_img = pipe(image)
+    torch_img = pipe(img)
 
     if add_batch_dimension:
         torch_img = torch_img.unsqueeze(0)

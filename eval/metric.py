@@ -5,7 +5,6 @@
 import os
 import shutil
 import numpy as np
-import lpips as lps
 import torch
 import torchvision.transforms as transforms
 
@@ -34,12 +33,17 @@ class Accumulator:
     
     def average(self):
         if self.n == 0:
-            raise RuntimeError("<Accumulator.average()>: No elements")
+            return 0
+            # raise RuntimeError("<Accumulator.average()>: No elements")
         
         result = self.total / self.n
 
         return result
     
+    def reset(self):
+        self.total = 0
+        self.n = 0
+        
 class Metric:
     def __init__(self):
         pass
@@ -165,7 +169,7 @@ class ISM(Metric):
 
         progress_bar = target_face_vectors
         if enable_progress_bar:
-            progress_bar = tqdm(target_face_vectors, desc = "Score calculation", unit = "image")
+            progress_bar = tqdm(target_face_vectors, desc = "ISM.eval()", unit = "image")
 
         for target_face_vector in progress_bar:
             score = cosine_similarity(target_face_vector, average_reference_face_vector)
@@ -262,12 +266,11 @@ class SSIM(Metric):
 
             target_image = to_tensor(target_image).unsqueeze(0)
             reference_image = to_tensor(reference_image).unsqueeze(0)
-
             ssim = StructuralSimilarityIndexMeasure(data_range = 255)
             
-            score = ssim(target_image, reference_image)
+            score = ssim(target_image.float(), reference_image.float())
 
-            accumulator.accumulate(score)
+            accumulator.accumulate(score.item())
 
         avr_score = accumulator.average()
 
@@ -281,30 +284,33 @@ class LPIPS(Metric):
         target_images_name = sorted(os.listdir(target_folder))
         reference_images_name = sorted(os.listdir(reference_folder))
 
+        print(target_images_name)
+        print(reference_images_name)
+        
         for i in range(len(target_images_name)):
             target_image = read_image(
                 src = f"{target_folder}/{target_images_name[i]}",
-                data_range = (-1, 1)
+                pixel_range = (-1, 1)
             )
 
             reference_image = read_image(
                 src = f"{reference_folder}/{reference_images_name[i]}",
-                data_range = (-1, 1)
+                pixel_range = (-1, 1)
             )
 
             target_image = target_image.cuda()
             reference_image = reference_image.cuda()
 
-            lpips = LearnedPerceptualImagePatchSimilarity(net_type = "vgg")
+            lpips = LearnedPerceptualImagePatchSimilarity(net_type = "vgg").cuda()
 
             with torch.no_grad():
                 score = lpips(target_image, reference_image)
 
-            accumulator.accumulate(score)
+            accumulator.accumulate(score.item())
 
         avr_score = accumulator.average()        
 
-        return avg_score
+        return avr_score
 
 class PSNR(Metric):
     @classmethod
@@ -321,7 +327,7 @@ class PSNR(Metric):
             psnr = PeakSignalNoiseRatio()
             score = psnr(target_img, ref_img)
 
-            accumulator.accumulate(score)
+            accumulator.accumulate(score.item())
 
         avr_score = accumulator.average()
 
